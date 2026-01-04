@@ -129,7 +129,7 @@ The WalkFlow demo environment includes **preconfigured demo accounts** to explor
 > ⚠️ **Important**
 >
 > These credentials are **for demonstration purposes only**.
-> They do **not** contain real patient data and must **never** be used in production environments.
+> They do **not** contain real staff data and must **never** be used in production environments.
 
 ### Demo Accounts
 
@@ -240,7 +240,7 @@ O ambiente de demonstração do WalkFlow inclui **contas de acesso pré-configur
 > ⚠️ **Aviso Importante**
 >
 > Estas credenciais destinam-se **exclusivamente a fins de demonstração**.
-> Não contêm dados reais de utentes e **não devem ser utilizadas em ambiente produtivo**.
+> Não contêm dados reais de colaboradores e **não devem ser utilizadas em ambiente produtivo**.
 
 ### Contas de Demonstração
 
