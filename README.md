@@ -122,6 +122,24 @@ Excel / PDF
 - Alignment with nursing coordination practice
 
 ---
+## Demo Access
+
+The WalkFlow demo environment includes **preconfigured demo accounts** to explore the platform features.
+
+> ⚠️ **Important**
+>
+> These credentials are **for demonstration purposes only**.
+> They do **not** contain real patient data and must **never** be used in production environments.
+
+### Demo Accounts
+
+| Role | Username | Password |
+|---|---|---|
+| Administrator | `admin` | `123456` |
+
+Role-based access control (RBAC) is enforced, and each profile exposes different operational capabilities.
+
+---
 
 ## License
 
@@ -212,6 +230,25 @@ Todas as ações estão **dependentes de validação humana**.
 - Transparência total das regras
 - Supervisão humana obrigatória
 - Alinhamento com práticas reais de coordenação de enfermagem
+
+---
+
+## Acesso Demo
+
+O ambiente de demonstração do WalkFlow inclui **contas de acesso pré-configuradas** para exploração das funcionalidades da plataforma.
+
+> ⚠️ **Aviso Importante**
+>
+> Estas credenciais destinam-se **exclusivamente a fins de demonstração**.
+> Não contêm dados reais de utentes e **não devem ser utilizadas em ambiente produtivo**.
+
+### Contas de Demonstração
+
+| Perfil | Utilizador | Palavra-passe |
+|---|---|---|
+| Administrador | `admin` | `123456` |
+
+O controlo de acessos por perfil (RBAC) encontra-se ativo, estando cada utilizador limitado às permissões do respetivo papel.
 
 ---
 
