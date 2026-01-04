@@ -25,7 +25,7 @@
 
 ## Demo
 
-![demo](https://github.com/user-attachments/assets/c9c0b0ae-1a91-4207-a359-782c9fcc259b)
+![gif](https://github.com/user-attachments/assets/c9c0b0ae-1a91-4207-a359-782c9fcc259b)
 
 ---
 <details open>
