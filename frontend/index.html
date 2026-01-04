@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ShiftFlow</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/main.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <div class="brand-logos">
+          <img id="brandAppLogo" src="/static/logo.png" alt="ShiftFlow logo" />
+        </div>
+        <div class="brand-text">
+          <h1 id="brandTitle">ShiftFlow</h1>
+          <div class="brand-org">
+            <img id="brandOrgLogo" src="" alt="Logo da unidade" style="display: none;" />
+            <p id="brandSubtitle">Gestao de turnos e horarios</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <label class="lang-select">
+          <span data-i18n="label.language">Idioma</span>
+          <select id="langSelect"></select>
+        </label>
+        <span id="userBadge"></span>
+        <button id="logoutBtn" class="ghost" style="display: none;" data-i18n="action.logout">Sair</button>
+      </div>
+      <div class="period-selector">
+        <label>
+          <span data-i18n="label.month">Mês</span>
+          <select id="monthSelect"></select>
+        </label>
+        <label>
+          <span data-i18n="label.year">Ano</span>
+          <select id="yearSelect"></select>
+        </label>
+        <label>
+          <span data-i18n="label.team">Equipa</span>
+          <select id="groupSelect">
+            <option value="ENFERMEIRO" data-i18n="group.enf">Enfermagem</option>
+            <option value="ASSISTENTE_OPERACIONAL" data-i18n="group.ao">Assistentes Operacionais</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <nav>
+      <button data-section="dashboard" data-roles="ALL" class="active" data-i18n="nav.dashboard">Dashboard</button>
+      <button data-section="nurses" data-roles="ADMIN,COORDENADOR" data-i18n="nav.nurses">Profissionais</button>
+      <button data-section="requirements" data-roles="ADMIN,COORDENADOR" data-i18n="nav.requirements">Necessidades</button>
+      <button data-section="constraints" data-roles="ADMIN,COORDENADOR" data-i18n="nav.constraints">Disponibilidades</button>
+      <button data-section="rules" data-roles="ADMIN,COORDENADOR" data-i18n="nav.rules">Regras</button>
+      <button data-section="teams" data-roles="ADMIN,COORDENADOR" data-i18n="nav.teams">Equipas</button>
+      <button data-section="services" data-roles="ADMIN,COORDENADOR" data-i18n="nav.services">Serviços/Turnos</button>
+      <button data-section="schedule" data-roles="ALL" data-i18n="nav.schedule">Horário</button>
+      <button data-section="swaps" data-roles="ALL">
+        <span data-i18n="nav.swaps">Trocas</span>
+        <span id="swapsBadge" class="badge nav-badge hidden"></span>
+      </button>
+      <button data-section="chat" data-roles="ALL">
+        <span data-i18n="nav.chat">Chat</span>
+        <span id="chatBadge" class="badge nav-badge hidden"></span>
+      </button>
+      <button data-section="admin" data-roles="ADMIN" data-i18n="nav.admin">Admin</button>
+    </nav>
+
+    <main>
+      <section id="dashboard" class="visible">
+        <h2 data-i18n="section.dashboard">Dashboard</h2>
+        <p id="currentPeriodLabel" class="period-label"></p>
+        <div class="actions">
+          <button id="generateBtn" class="editor-only" data-i18n="dashboard.generate">Gerar horário</button>
+          <button id="exportScheduleBtn" data-i18n="dashboard.export_schedule">Exportar horário</button>
+          <button id="exportConstraintsBtn" data-i18n="dashboard.export_constraints">Exportar disponibilidades</button>
+        </div>
+        <div id="dashboardStats">
+          <div class="stat">
+            <span id="statNeeds">0</span>
+            <small data-i18n="dashboard.needs">Necessidades</small>
+          </div>
+          <div class="stat">
+            <span id="statAssigned">0</span>
+            <small data-i18n="dashboard.assigned">Turnos atribuídos</small>
+          </div>
+          <div class="stat">
+            <span id="statLocks">0</span>
+            <small data-i18n="dashboard.locks">Locks ativos</small>
+          </div>
+          <div class="stat">
+            <span id="statViolations">0</span>
+            <small data-i18n="dashboard.alerts">Alertas</small>
+          </div>
+        </div>
+        <div id="generationStatus"></div>
+      </section>
+
+      <section id="nurses">
+        <div class="section-header">
+        <h2 data-i18n="section.nurses">Profissionais</h2>
+          <span class="section-period" data-section-period="nurses"></span>
+        </div>
+        <button id="addNurseBtn" class="editor-only" data-i18n="btn.add_professional">Adicionar profissional</button>
+        <div id="nurseFormPanel" class="floating-panel hidden editor-only">
+          <form id="nurseForm">
+            <h3 id="nurseFormTitle" data-i18n="label.professional">Profissional</h3>
+            <input type="text" id="nurseName" placeholder="Nome" required />
+            <select id="nurseUser" required></select>
+            <select id="nurseCategory"></select>
+            <input type="text" id="nurseCategoryCustom" placeholder="Outra categoria (opcional)" />
+            <label class="service-picker">
+              <span data-i18n="label.services_allowed">Serviços permitidos</span>
+              <div id="serviceChecklist"></div>
+              <select id="nurseServices" multiple hidden></select>
+            </label>
+            <label id="weeklyHoursWrapper">
+              <span data-i18n="label.weekly_hours">Horas semanais</span>
+              <input type="number" id="nurseWeeklyHours" min="0" value="0" />
+            </label>
+            <label>
+              <span data-i18n="label.can_night">Pode fazer noite?</span>
+              <input type="checkbox" id="nurseNight" checked />
+            </label>
+            <label>
+              <span data-i18n="label.max_nights">Máx. noites/mês</span>
+              <input type="number" id="nurseMaxNight" min="0" />
+            </label>
+            <div class="floating-actions">
+              <button type="submit" data-i18n="btn.save">Guardar</button>
+              <button type="button" id="cancelEditNurse" class="secondary" data-i18n="btn.close">Fechar</button>
+            </div>
+          </form>
+        </div>
+        <table id="nurseTable">
+          <thead>
+            <tr>
+              <th data-i18n="label.name">Nome</th>
+              <th data-i18n="label.user">Utilizador</th>
+              <th data-i18n="label.services">Serviços</th>
+              <th data-i18n="label.weekly_hours">Horas semanais</th>
+              <th data-i18n="label.balance">Saldo (h)</th>
+              <th data-i18n="label.actions">Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section id="requirements">
+        <div class="section-header">
+        <h2 data-i18n="section.requirements">Necessidades do mês</h2>
+          <span class="section-period" data-section-period="requirements"></span>
+        </div>
+        <div class="actions editor-only">
+          <button id="fillRequirementsOnesBtn" type="button" data-i18n="btn.fill_all">Preencher tudo com 1</button>
+          <button id="clearRequirementsBtn" type="button" class="secondary" data-i18n="btn.clear_all">Limpar tudo</button>
+        </div>
+        <div class="table-wrapper">
+          <table id="requirementsTable" class="compact-table"></table>
+        </div>
+        <button id="saveRequirementsBtn" class="editor-only" data-i18n="btn.save_requirements">Guardar necessidades</button>
+      </section>
+
+      <section id="constraints">
+        <div class="section-header">
+        <h2 data-i18n="section.constraints">Disponibilidades / Pedidos</h2>
+          <span class="section-period" data-section-period="constraints"></span>
+        </div>
+        <div id="constraintsLegend" class="editor-only"></div>
+        <div class="table-wrapper editor-only">
+          <table id="constraintsTable" class="compact-table"></table>
+        </div>
+        <button id="saveConstraintsBtn" class="editor-only" data-i18n="btn.save_constraints">Guardar marcações</button>
+        <div class="card staff-only">
+          <h3 data-i18n="label.my_availability">As minhas disponibilidades</h3>
+          <p class="hint" data-i18n="label.my_availability_hint">Preenche apenas o teu próprio mapa e envia para aprovação do coordenador.</p>
+          <div class="actions">
+            <button id="fillMyAvailableBtn" type="button" data-i18n="btn.available_all">Disponível em todos</button>
+            <button id="fillMyUnavailableBtn" type="button" class="secondary" data-i18n="btn.unavailable_all">Indisponível em todos</button>
+          </div>
+          <div class="table-wrapper">
+            <table id="myConstraintsTable" class="compact-table"></table>
+          </div>
+          <button id="submitAvailabilityBtn" type="button" data-i18n="btn.submit_availability">Enviar para aprovação</button>
+          <div id="myAvailabilityStatus" class="hint"></div>
+          <div id="myAvailabilityList"></div>
+        </div>
+        <div class="card editor-only">
+          <h3 data-i18n="label.pending_availability">Pedidos pendentes de disponibilidades</h3>
+          <div id="pendingAvailabilityList"></div>
+        </div>
+      </section>
+
+      <section id="rules">
+        <div class="section-header">
+        <h2 data-i18n="section.rules">Regras do Mês</h2>
+          <span class="section-period" data-section-period="rules"></span>
+        </div>
+        <p class="hint" data-i18n="label.rules_hint">
+          Ajusta os limites para o mês selecionado: estes valores controlam o máximo de horas semanais,
+          o alvo médio e o comportamento dos pedidos de folga e penalizações do solver.
+        </p>
+        <form id="rulesForm">
+          <div class="rules-grid">
+            <label>
+              <span data-i18n="label.rule_max_hours">Máx. horas/semana (Contratado)</span>
+              <input type="number" id="configMaxHoras" min="1" />
+            </label>
+            <label>
+              <span data-i18n="label.rule_target_hours">Target horas/semana</span>
+              <input type="number" id="configTargetHoras" min="1" />
+            </label>
+            <label>
+              <span data-i18n="label.rule_rest_hours">Horas mínimas de descanso</span>
+              <input type="number" id="configRestHours" min="0" step="0.5" />
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" id="configPedidosHard" />
+              <span data-i18n="label.rule_hard_requests">Pedidos de folga = regra hard</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" id="configPreferFolgaND" />
+              <span data-i18n="label.rule_prefer_folga_nd">Privilegiar folga após sequência N + D</span>
+            </label>
+          </div>
+          <div>
+            <h3 data-i18n="label.penalties">Penalizações</h3>
+            <p class="hint" data-i18n="label.penalties_hint">
+              Valores mais altos tornam a violação mais cara para o solver (por ex.: “Slot vazio” deve ser o maior).
+            </p>
+            <div id="penaltiesContainer" class="penalties-grid"></div>
+          </div>
+          <button type="submit" class="editor-only" data-i18n="btn.save_rules">Guardar regras</button>
+        </form>
+        <div class="shift-settings-card">
+          <h3 data-i18n="label.shift_settings_title">Horários dos turnos</h3>
+          <p class="hint" data-i18n="label.shift_settings_hint">
+            Ajusta manualmente os horários de início/fim para cada código. Se a hora final for anterior (ou igual) à inicial assume-se que termina no dia seguinte.
+          </p>
+          <div class="table-wrapper">
+            <table id="shiftSettingsTable" class="compact-table"></table>
+          </div>
+        </div>
+        <div class="holidays-panel">
+          <div>
+            <h3 data-i18n="label.holidays_title">Feriados do mês</h3>
+            <ul id="holidayList"></ul>
+          </div>
+          <div>
+            <h3 data-i18n="label.manual_holidays_title">Feriados manuais</h3>
+            <form id="manualHolidayForm">
+              <label>
+                <span data-i18n="label.date">Dia</span>
+                <input type="number" id="manualHolidayDay" min="1" max="31" required />
+              </label>
+              <label>
+                <span data-i18n="label.action">Ação</span>
+                <select id="manualHolidayAction">
+                  <option value="ADD" data-i18n="action.add_update_holiday">Adicionar/alterar</option>
+                  <option value="REMOVE" data-i18n="action.remove_national_holiday">Remover feriado nacional</option>
+                </select>
+              </label>
+              <input type="text" id="manualHolidayLabel" placeholder="Descrição" required />
+              <button type="submit" class="editor-only" data-i18n="btn.add_holiday">Adicionar</button>
+            </form>
+            <ul id="manualHolidayList"></ul>
+          </div>
+        </div>
+        <div class="adjustments-card">
+          <h3 data-i18n="label.adjustments_title">Feriados trabalhados / ajustes manuais</h3>
+          <p class="hint" data-i18n="label.adjustments_hint">
+            Introduz os feriados realizados (cada um desconta 8h ao objetivo) e ajusta horas extra ou reduções para os CONTRATADOS.
+          </p>
+          <form id="adjustmentsForm">
+            <div class="table-wrapper">
+              <table id="adjustmentsTable" class="compact-table"></table>
+            </div>
+            <button type="submit" class="editor-only" data-i18n="btn.save_adjustments">Guardar ajustes</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="schedule">
+        <div class="section-header">
+        <h2 data-i18n="section.schedule">Horário do mês</h2>
+          <span class="section-period" data-section-period="schedule"></span>
+        </div>
+        <div class="section-actions">
+          <button id="exportScheduleBtnMenu" data-i18n="dashboard.export_schedule">Exportar horário</button>
+        </div>
+        <p class="hint" data-i18n="label.schedule_hint">
+          Clique numa célula para editar; use as teclas L para bloquear/desbloquear rapidamente e Delete para limpar.
+        </p>
+        <div class="schedule-release editor-only">
+          <h3 data-i18n="label.schedule_release">Publicar horário</h3>
+          <form id="releaseForm" class="inline-form">
+            <label>
+              <span data-i18n="label.team">Equipa</span>
+              <select id="releaseTeam"></select>
+            </label>
+            <button type="submit" data-i18n="btn.publish">Publicar</button>
+          </form>
+        </div>
+        <div class="table-wrapper">
+          <table id="scheduleTable"></table>
+        </div>
+        <div class="schedule-tools editor-only">
+          <h3 data-i18n="label.schedule_tools">Gestão de horários</h3>
+          <form id="clearScheduleForm" class="inline-form">
+            <label>
+              <span data-i18n="label.month">Mês</span>
+              <select id="clearScheduleMonth"></select>
+            </label>
+            <label>
+              <span data-i18n="label.year">Ano</span>
+              <select id="clearScheduleYear"></select>
+            </label>
+            <button type="submit" data-i18n="btn.clear_schedule">Apagar horário selecionado</button>
+          </form>
+        </div>
+        <div>
+          <h3 data-i18n="label.schedule_stats_title">Horas por profissional</h3>
+          <div class="table-wrapper">
+            <table id="scheduleStatsTable" class="compact-table"></table>
+          </div>
+        </div>
+        <div>
+          <h3 data-i18n="label.unfilled_title">Cobertura em falta</h3>
+          <ul id="unfilledList"></ul>
+        </div>
+        <div>
+          <h3 data-i18n="label.violations_title">Violações / Alertas</h3>
+          <ul id="violationsList"></ul>
+        </div>
+      </section>
+
+      <section id="teams">
+        <div class="section-header">
+        <h2 data-i18n="section.teams">Equipas de serviço</h2>
+          <span class="section-period" data-section-period="teams"></span>
+        </div>
+        <form id="teamForm">
+          <input type="text" id="teamName" placeholder="Nome da equipa" data-i18n-placeholder="placeholder.team_name" required />
+          <input type="text" id="teamService" placeholder="Código do serviço" data-i18n-placeholder="placeholder.service_code" />
+          <select id="teamRole" data-role-select="team" required></select>
+          <button type="submit" data-i18n="btn.create_team">Criar equipa</button>
+        </form>
+        <table id="teamTable">
+          <thead>
+            <tr>
+              <th data-i18n="label.team">Equipa</th>
+              <th data-i18n="label.service">Serviço</th>
+              <th data-i18n="label.role">Perfil</th>
+              <th data-i18n="label.status">Estado</th>
+              <th data-i18n="label.actions">Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="card">
+          <h3 data-i18n="label.team_members">Membros da equipa</h3>
+          <form id="teamMembersForm">
+            <label>
+              <span data-i18n="label.team">Equipa</span>
+              <select id="teamMembersSelect"></select>
+            </label>
+            <div id="teamMembersList" class="checkbox-grid"></div>
+            <button type="submit" data-i18n="btn.add_member">Guardar membros</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="services">
+        <div class="section-header">
+        <h2 data-i18n="section.services">Serviços e turnos</h2>
+          <span class="section-period" data-section-period="services"></span>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="label.services_section">Serviços</h3>
+            <form id="serviceForm">
+              <input type="text" id="serviceCode" placeholder="Código" data-i18n-placeholder="placeholder.service_code" required />
+              <input type="text" id="serviceName" placeholder="Nome" data-i18n-placeholder="placeholder.service_name" required />
+              <select id="serviceRole" data-role-select="service" required></select>
+              <input type="color" id="serviceColor" value="#e2e8f0" />
+              <button type="submit" data-i18n="btn.add">Adicionar</button>
+            </form>
+            <table id="serviceTable">
+              <thead>
+                <tr>
+                  <th data-i18n="label.code">Código</th>
+                  <th data-i18n="label.name">Nome</th>
+                  <th data-i18n="label.role">Perfil</th>
+                  <th data-i18n="label.color">Cor</th>
+                  <th data-i18n="label.actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3 data-i18n="label.shifts_section">Turnos</h3>
+            <form id="shiftForm">
+              <input type="text" id="shiftCode" placeholder="Código" data-i18n-placeholder="placeholder.shift_code" required />
+              <input type="text" id="shiftLabel" placeholder="Etiqueta" data-i18n-placeholder="placeholder.shift_label" required />
+              <select id="shiftType">
+                <option value="M">M</option>
+                <option value="T">T</option>
+                <option value="L">L</option>
+                <option value="N">N</option>
+              </select>
+              <input type="time" id="shiftStart" required />
+              <input type="time" id="shiftEnd" required />
+              <button type="submit" data-i18n="btn.add">Adicionar</button>
+            </form>
+            <table id="shiftTable">
+              <thead>
+                <tr>
+                  <th data-i18n="label.code">Código</th>
+                  <th data-i18n="label.shift_label">Etiqueta</th>
+                  <th data-i18n="label.type">Tipo</th>
+                  <th data-i18n="label.start">Início</th>
+                  <th data-i18n="label.end">Fim</th>
+                  <th data-i18n="label.actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="label.service_shift_link">Associação serviço-turno</h3>
+          <form id="serviceShiftForm">
+            <label>
+              <span data-i18n="label.service">Serviço</span>
+              <select id="serviceShiftService"></select>
+            </label>
+            <label>
+              <span data-i18n="label.shift">Turno</span>
+              <select id="serviceShiftShift"></select>
+            </label>
+            <button type="submit" data-i18n="btn.associate">Associar</button>
+          </form>
+          <table id="serviceShiftTable">
+            <thead>
+              <tr>
+                <th data-i18n="label.service">Serviço</th>
+                <th data-i18n="label.shift">Turno</th>
+                <th data-i18n="label.actions">Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="swaps">
+        <div class="section-header">
+        <h2 data-i18n="section.swaps">Trocas de turno</h2>
+          <span class="section-period" data-section-period="swaps"></span>
+        </div>
+        <div class="actions">
+          <button id="exportSwapsBtn" data-i18n="label.export_swaps">Exportar trocas</button>
+        </div>
+        <div class="card">
+          <h3 data-i18n="label.swap_request">Pedir troca</h3>
+          <form id="swapForm">
+            <input type="date" id="swapDate" required />
+            <input type="text" id="swapService" placeholder="Serviço atual (opcional)" data-i18n-placeholder="placeholder.swap_service" />
+            <input type="text" id="swapShift" placeholder="Turno atual (opcional)" data-i18n-placeholder="placeholder.swap_shift" />
+            <input type="text" id="swapDesiredService" placeholder="Serviço pretendido (opcional)" data-i18n-placeholder="placeholder.swap_desired_service" />
+            <input type="text" id="swapDesiredShift" placeholder="Turno pretendido (opcional)" data-i18n-placeholder="placeholder.swap_desired_shift" />
+            <input type="text" id="swapReason" placeholder="Motivo (opcional)" data-i18n-placeholder="placeholder.reason_optional" />
+            <input type="text" id="swapObservations" placeholder="Observações (opcional)" data-i18n-placeholder="placeholder.observations_optional" />
+            <label>
+              <span data-i18n="label.participants">Participantes</span>
+              <select id="swapParticipants"></select>
+            </label>
+            <button type="submit" data-i18n="label.swap_send">Enviar pedido</button>
+          </form>
+        </div>
+        <div class="card">
+          <h3 data-i18n="label.swap_requests_title">Pedidos</h3>
+          <div id="swapList"></div>
+        </div>
+      </section>
+
+      <section id="chat">
+        <div class="section-header">
+        <h2 data-i18n="section.chat">Chat</h2>
+          <span class="section-period" data-section-period="chat"></span>
+        </div>
+        <div class="chat-layout">
+          <div class="chat-sidebar">
+            <h4 data-i18n="label.chat_users">Utilizadores</h4>
+            <input type="text" id="chatUserSearch" placeholder="Procurar utilizador..." data-i18n-placeholder="placeholder.search_user" />
+            <div id="chatUsers"></div>
+            <h4 data-i18n="label.chat_threads">Conversas</h4>
+            <div id="chatThreads"></div>
+          </div>
+          <div class="chat-main">
+            <div id="chatHeader"></div>
+            <div id="chatMessages" class="chat-messages"></div>
+            <form id="chatForm">
+              <div class="chat-recipient-controls">
+                <label>
+                  <span data-i18n="label.recipients">Destinatários</span>
+                  <select id="chatRecipientMode">
+                    <option value="users" data-i18n="chat.send_to_users">Utilizadores</option>
+                    <option value="role" data-i18n="chat.send_to_role">Perfil</option>
+                    <option value="all" data-i18n="chat.send_to_all">Todos</option>
+                  </select>
+                </label>
+                <label id="chatRecipientUsersWrap">
+                  <span data-i18n="label.recipients_users">Utilizadores</span>
+                  <select id="chatRecipientUsers" multiple size="6"></select>
+                </label>
+                <label id="chatRecipientRoleWrap" class="hidden">
+                  <span data-i18n="label.recipients_role">Perfil</span>
+                  <select id="chatRecipientRole"></select>
+                </label>
+              </div>
+              <input type="text" id="chatMessageInput" placeholder="Escreva a mensagem..." data-i18n-placeholder="placeholder.chat_message" />
+              <button type="submit" data-i18n="btn.send">Enviar</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="admin">
+        <div class="section-header">
+        <h2 data-i18n="section.admin">Administração</h2>
+          <span class="section-period" data-section-period="admin"></span>
+        </div>
+        <div class="admin-grid">
+          <div class="card">
+            <h3 data-i18n="label.unit_settings">Configuração da unidade</h3>
+            <form id="settingsForm">
+              <input type="text" id="settingsAppName" placeholder="Nome da plataforma" data-i18n-placeholder="placeholder.app_name" />
+              <input type="text" id="settingsOrgName" placeholder="Nome da clínica/hospital" data-i18n-placeholder="placeholder.org_name" />
+              <label class="checkbox">
+                <input type="checkbox" id="settingsShowAppLogo" />
+                <span data-i18n="label.show_app_logo">Mostrar logo ShiftFlow</span>
+              </label>
+              <label class="checkbox">
+                <input type="checkbox" id="settingsShowOrgLogo" />
+                <span data-i18n="label.show_org_logo">Mostrar logo da clínica</span>
+              </label>
+              <input type="color" id="settingsPrimaryColor" />
+              <input type="color" id="settingsAccentColor" />
+              <input type="color" id="settingsBackground" />
+              <label>
+                <span data-i18n="label.pdf_footer_label">Texto do rodapé do PDF</span>
+                <textarea
+                  id="settingsPdfInfo"
+                  rows="8"
+                  placeholder="Texto para rodapé dos PDFs"
+                ></textarea>
+              </label>
+              <button type="submit" data-i18n="btn.save">Guardar</button>
+            </form>
+            <form id="logoUploadForm">
+              <label>
+                <span data-i18n="label.app_logo">Logo ShiftFlow</span>
+                <input type="file" id="logoAppFile" accept="image/*" />
+              </label>
+              <label>
+                <span data-i18n="label.org_logo">Logo da clínica</span>
+                <input type="file" id="logoOrgFile" accept="image/*" />
+              </label>
+              <button type="submit" data-i18n="label.upload_logos">Carregar logos</button>
+            </form>
+          </div>
+          <div class="card">
+            <h3 data-i18n="label.professional_categories">Categorias profissionais</h3>
+            <form id="categoryForm">
+              <input type="text" id="categoryName" placeholder="Nome da categoria" data-i18n-placeholder="placeholder.category_name" required />
+              <input type="text" id="categoryRole" list="roleOptionsList" placeholder="Perfil" data-i18n-placeholder="placeholder.role" />
+              <input type="number" id="categoryOrder" placeholder="Ordem (opcional)" data-i18n-placeholder="placeholder.order" min="0" />
+              <button type="submit" data-i18n="label.add_category">Adicionar categoria</button>
+            </form>
+            <table id="categoryTable">
+              <thead>
+                <tr>
+                  <th data-i18n="label.category">Categoria</th>
+                  <th data-i18n="label.role">Perfil</th>
+                  <th data-i18n="label.order">Ordem</th>
+                  <th data-i18n="label.category_active">Ativa</th>
+                  <th data-i18n="label.actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3 data-i18n="label.users">Utilizadores</h3>
+            <div class="actions" style="margin-bottom: 0.75rem;">
+              <button id="openUserModalBtn" type="button" data-i18n="label.new_user">Novo utilizador</button>
+            </div>
+            <table id="userTable">
+              <thead>
+                <tr>
+                  <th data-i18n="placeholder.username">Username</th>
+                  <th data-i18n="label.name">Nome</th>
+                  <th data-i18n="label.role">Perfil</th>
+                  <th data-i18n="label.status">Estado</th>
+                  <th data-i18n="label.actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div class="actions" style="margin-top: 0.75rem;">
+              <button id="seedDemoBtn" type="button" data-i18n="label.create_demos">Criar demos</button>
+              <button id="clearDemoBtn" type="button" class="secondary" data-i18n="label.clear_demos">Apagar demos</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="userModal" class="modal hidden">
+      <div class="modal-card">
+        <h3 id="userModalTitle" data-i18n="label.user">Utilizador</h3>
+        <form id="userForm">
+          <input type="text" id="userUsername" placeholder="Username" data-i18n-placeholder="placeholder.username" required />
+          <input type="text" id="userFullName" placeholder="Nome completo" data-i18n-placeholder="placeholder.full_name" required />
+          <select id="userRole"></select>
+          <input type="password" id="userPassword" placeholder="Password" data-i18n-placeholder="placeholder.password" />
+          <label class="checkbox">
+            <input type="checkbox" id="userActive" checked />
+            <span data-i18n="label.user_active">Utilizador ativo</span>
+          </label>
+          <div class="modal-actions">
+            <button type="submit" id="userModalSubmit" data-i18n="btn.save">Guardar</button>
+            <button type="button" class="secondary" id="userModalCancel" data-i18n="btn.cancel">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="teamModal" class="modal hidden">
+      <div class="modal-card">
+        <h3 id="teamModalTitle" data-i18n="label.team">Equipa</h3>
+        <form id="teamEditForm">
+          <input type="text" id="teamEditName" placeholder="Nome da equipa" data-i18n-placeholder="placeholder.team_name" required />
+          <select id="teamEditRole" data-role-select="team-edit"></select>
+          <select id="teamEditService">
+            <option value="" data-i18n="services.none_service">Sem serviço</option>
+          </select>
+          <div class="modal-actions">
+            <button type="submit" data-i18n="btn.save">Guardar</button>
+            <button type="button" class="secondary" id="teamModalCancel" data-i18n="btn.cancel">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="categoryModal" class="modal hidden">
+      <div class="modal-card">
+        <h3 id="categoryModalTitle" data-i18n="label.category">Categoria</h3>
+        <form id="categoryEditForm">
+          <input type="text" id="categoryEditName" placeholder="Nome" data-i18n-placeholder="placeholder.name" required />
+          <input type="text" id="categoryEditRole" list="roleOptionsList" placeholder="Perfil" data-i18n-placeholder="placeholder.role" />
+          <input type="number" id="categoryEditOrder" placeholder="Ordem" data-i18n-placeholder="placeholder.order" min="0" />
+          <label class="checkbox">
+            <input type="checkbox" id="categoryEditActive" checked />
+            <span data-i18n="label.category_active">Ativa</span>
+          </label>
+          <div class="modal-actions">
+            <button type="submit" data-i18n="btn.save">Guardar</button>
+            <button type="button" class="secondary" id="categoryModalCancel" data-i18n="btn.cancel">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="cellEditor" class="hidden editor-only">
+      <label>
+        <span data-i18n="label.shift">Turno</span>
+        <select id="cellEditorSelect"></select>
+      </label>
+      <label>
+        <span data-i18n="label.shift2">Turno 2 (opcional)</span>
+        <select id="cellEditorSelect2"></select>
+      </label>
+      <label>
+        <span data-i18n="label.shift3">Turno 3 (opcional)</span>
+        <select id="cellEditorSelect3"></select>
+      </label>
+      <label class="checkbox">
+        <input type="checkbox" id="cellEditorLock" />
+        <span data-i18n="label.lock">Lock</span>
+      </label>
+      <div class="cell-editor-actions">
+        <button id="cellEditorSave" data-i18n="btn.apply">Aplicar</button>
+        <button id="cellEditorClear" type="button" data-i18n="btn.clear">Limpar</button>
+        <button id="cellEditorCancel" type="button" data-i18n="btn.cancel">Cancelar</button>
+      </div>
+    </div>
+    <datalist id="constraintCodesList"></datalist>
+    <datalist id="roleOptionsList"></datalist>
+
+  </body>
+</html>

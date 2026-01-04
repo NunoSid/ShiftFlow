@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ShiftFlow - Login</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <div class="brand-logos">
+          <img id="loginAppLogo" src="/static/logo.png" alt="ShiftFlow logo" />
+        </div>
+        <div class="brand-text">
+          <h1 id="loginTitle">ShiftFlow</h1>
+          <div class="brand-org">
+            <img id="loginOrgLogo" src="" alt="Logo da unidade" style="display: none;" />
+            <p id="loginSubtitle" data-i18n="app.subtitle">Gestao de turnos e horarios</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <label class="lang-select">
+          <span data-i18n="label.language">Idioma</span>
+          <select id="loginLangSelect"></select>
+        </label>
+      </div>
+    </header>
+    <main class="login-page">
+      <form id="loginForm" class="login-card">
+        <h2 data-i18n="label.login_title">Entrar no ShiftFlow</h2>
+        <input type="text" id="loginUsername" placeholder="Username" data-i18n-placeholder="placeholder.username" required />
+        <input type="password" id="loginPassword" placeholder="Password" data-i18n-placeholder="placeholder.password" required />
+        <p id="loginError" class="error"></p>
+        <button type="submit" data-i18n="label.login_button">Entrar</button>
+      </form>
+    </main>
+    <script>
+      const I18N = {
+        pt: {
+          "label.language": "Idioma",
+          "app.subtitle": "Gestao de turnos e horarios",
+          "label.login_title": "Entrar no ShiftFlow",
+          "label.login_button": "Entrar",
+          "label.login_error": "Credenciais inválidas.",
+          "placeholder.username": "Username",
+          "placeholder.password": "Password",
+          "lang.pt": "Português",
+          "lang.en": "Inglês"
+        },
+        en: {
+          "label.language": "Language",
+          "app.subtitle": "Shift planning and scheduling",
+          "label.login_title": "Sign in to ShiftFlow",
+          "label.login_button": "Sign in",
+          "label.login_error": "Invalid credentials.",
+          "placeholder.username": "Username",
+          "placeholder.password": "Password",
+          "lang.pt": "Portuguese",
+          "lang.en": "English"
+        }
+      };
+
+      function t(key, fallback) {
+        return I18N[lang]?.[key] ?? fallback ?? key;
+      }
+
+      let lang = localStorage.getItem("shiftflow_lang") || "pt";
+
+      function applyTranslations() {
+        document.documentElement.lang = lang;
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.dataset.i18n;
+          if (key) {
+            el.textContent = t(key, el.textContent);
+          }
+        });
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          const key = el.dataset.i18nPlaceholder;
+          if (key) {
+            el.placeholder = t(key, el.placeholder);
+          }
+        });
+        document.title = `${t("label.login_title", "Entrar no ShiftFlow")}`;
+      }
+
+      function setupLanguageSelect() {
+        const selector = document.getElementById("loginLangSelect");
+        if (!selector) return;
+        selector.innerHTML = "";
+        const pt = document.createElement("option");
+        pt.value = "pt";
+        pt.textContent = t("lang.pt", "Português");
+        const en = document.createElement("option");
+        en.value = "en";
+        en.textContent = t("lang.en", "Inglês");
+        selector.appendChild(pt);
+        selector.appendChild(en);
+        selector.value = lang;
+        selector.addEventListener("change", () => {
+          lang = selector.value === "en" ? "en" : "pt";
+          localStorage.setItem("shiftflow_lang", lang);
+          applyTranslations();
+        });
+      }
+
+      async function loadSettings() {
+        try {
+          const response = await fetch("/api/settings");
+          if (!response.ok) return;
+          const settings = await response.json();
+          const titleEl = document.getElementById("loginTitle");
+          const subtitleEl = document.getElementById("loginSubtitle");
+          const appLogoEl = document.getElementById("loginAppLogo");
+          const orgLogoEl = document.getElementById("loginOrgLogo");
+          if (titleEl && settings.app_name) {
+            titleEl.textContent = settings.app_name;
+            document.title = `${settings.app_name} - Login`;
+          }
+          if (subtitleEl) {
+            subtitleEl.textContent = settings.org_name || t("app.subtitle", "Gestao de turnos e horarios");
+          }
+          if (appLogoEl) {
+            if (settings.app_logo_url && settings.show_app_logo !== false) {
+              appLogoEl.src = settings.app_logo_url;
+              appLogoEl.style.display = "block";
+              if (titleEl) titleEl.style.display = "none";
+            } else {
+              appLogoEl.style.display = "none";
+              if (titleEl) titleEl.style.display = "";
+            }
+          }
+          if (orgLogoEl) {
+            if (settings.org_logo_url && settings.show_org_logo !== false) {
+              orgLogoEl.src = settings.org_logo_url;
+              orgLogoEl.style.display = "block";
+            } else {
+              orgLogoEl.style.display = "none";
+            }
+          }
+          const root = document.documentElement;
+          if (settings.primary_color) {
+            root.style.setProperty("--flow-primary", settings.primary_color);
+          }
+          if (settings.accent_color) {
+            root.style.setProperty("--flow-accent", settings.accent_color);
+          }
+          if (settings.background) {
+            root.style.setProperty("--flow-bg", settings.background);
+          }
+        } catch (e) {
+          console.warn("Nao foi possivel carregar configuracoes.", e);
+        }
+      }
+
+      const form = document.getElementById("loginForm");
+      const errorEl = document.getElementById("loginError");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorEl.textContent = "";
+        const username = document.getElementById("loginUsername").value.trim();
+        const password = document.getElementById("loginPassword").value;
+        try {
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+          if (!response.ok) throw new Error();
+          const data = await response.json();
+          localStorage.setItem("shiftflow_token", data.token);
+          localStorage.setItem("shiftflow_user", JSON.stringify(data.user));
+          window.location.href = "/";
+        } catch (err) {
+          errorEl.textContent = t("label.login_error", "Credenciais inválidas.");
+        }
+      });
+
+      setupLanguageSelect();
+      applyTranslations();
+      loadSettings();
+    </script>
+  </body>
+</html>
